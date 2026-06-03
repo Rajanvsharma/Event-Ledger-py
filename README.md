@@ -92,6 +92,37 @@ Expected:
 
 ---
 
+## Event Payload
+
+Submitted to `POST /events` on the Gateway:
+
+```json
+{
+  "eventId": "evt-001",
+  "accountId": "acct-123",
+  "type": "CREDIT",
+  "amount": 150.00,
+  "currency": "USD",
+  "eventTimestamp": "2026-05-15T14:02:11Z",
+  "metadata": {
+    "source": "mainframe-batch",
+    "batchId": "B-9042"
+  }
+}
+```
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `eventId` | string | Yes | Unique identifier — duplicate submissions return the original event |
+| `accountId` | string | Yes | The account this event belongs to |
+| `type` | string | Yes | Must be `"CREDIT"` or `"DEBIT"` |
+| `amount` | number | Yes | Must be greater than 0 |
+| `currency` | string | Yes | e.g. `"USD"` |
+| `eventTimestamp` | string (ISO 8601) | Yes | When the event originally occurred |
+| `metadata` | object | No | Optional additional context |
+
+---
+
 ## Try it out
 
 **Submit a CREDIT event:**
@@ -256,3 +287,41 @@ Circuit state is always visible at `GET /health` on the gateway.
 | GET | /accounts/{id}/balance | Get current balance |
 | GET | /accounts/{id} | Get account + transaction history |
 | GET | /health | Health check |
+
+---
+
+## Example request
+
+Submit an event with metadata:
+
+```bash
+curl -X POST http://localhost:8000/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventId": "evt-001",
+    "accountId": "acct-123",
+    "type": "CREDIT",
+    "amount": 150.00,
+    "currency": "USD",
+    "eventTimestamp": "2026-05-15T14:02:11Z",
+    "metadata": {"source": "mainframe-batch", "batchId": "B-9042"}
+  }'
+```
+
+Expected response (`201 Created`):
+
+```json
+{
+  "id": 1,
+  "event_id": "evt-001",
+  "account_id": "acct-123",
+  "type": "CREDIT",
+  "amount": 150.0,
+  "currency": "USD",
+  "event_timestamp": "2026-05-15T14:02:11Z",
+  "metadata": {"source": "mainframe-batch", "batchId": "B-9042"},
+  "received_at": "2026-05-15T14:02:12.345678+00:00"
+}
+```
+
+Submitting the same `eventId` again returns `200 OK` with the original record — no duplicate is created and the balance is unchanged.
