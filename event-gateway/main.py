@@ -21,18 +21,36 @@ propagate.set_global_textmap(CompositePropagator([TraceContextTextMapPropagator(
 
 ACCOUNT_SERVICE_URL = os.getenv("ACCOUNT_SERVICE_URL", "http://localhost:8001")
 
+_SERVICE_NAME = "event-gateway"
+
 # --- Structured logger ---
 
-def make_logger():
-    l = logging.getLogger("event-gateway")
+def _make_logger() -> logging.Logger:
+    logs_dir = os.getenv(
+        "LOGS_DIR",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logs"),
+    )
+    os.makedirs(logs_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_path = os.path.join(logs_dir, f"{timestamp}_{_SERVICE_NAME}.log")
+
+    fmt = logging.Formatter("%(message)s")
+    l = logging.getLogger(_SERVICE_NAME)
     if not l.handlers:
-        h = logging.StreamHandler()
-        h.setFormatter(logging.Formatter("%(message)s"))
-        l.addHandler(h)
+        console = logging.StreamHandler()
+        console.setFormatter(fmt)
+        l.addHandler(console)
+
+        fh = logging.FileHandler(log_path, encoding="utf-8")
+        fh.setFormatter(fmt)
+        l.addHandler(fh)
+
+    l.setLevel(logging.INFO)
     l.propagate = False
     return l
 
-logger = make_logger()
+logger = _make_logger()
 logging.basicConfig(level=logging.INFO)
 
 _request_count: dict[str, int] = {}

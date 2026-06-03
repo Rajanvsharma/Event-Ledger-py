@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -15,18 +16,35 @@ from tracing import setup_tracing, get_tracer
 setup_tracing()
 propagate.set_global_textmap(CompositePropagator([TraceContextTextMapPropagator()]))
 
-logging.basicConfig(level=logging.INFO)
+_SERVICE_NAME = "account-service"
 
-def make_logger():
-    logger = logging.getLogger("account-service")
+def _make_logger() -> logging.Logger:
+    logs_dir = os.getenv(
+        "LOGS_DIR",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logs"),
+    )
+    os.makedirs(logs_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_path = os.path.join(logs_dir, f"{timestamp}_{_SERVICE_NAME}.log")
+
+    fmt = logging.Formatter("%(message)s")
+    logger = logging.getLogger(_SERVICE_NAME)
     if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(message)s"))
-        logger.addHandler(handler)
+        console = logging.StreamHandler()
+        console.setFormatter(fmt)
+        logger.addHandler(console)
+
+        fh = logging.FileHandler(log_path, encoding="utf-8")
+        fh.setFormatter(fmt)
+        logger.addHandler(fh)
+
+    logger.setLevel(logging.INFO)
     logger.propagate = False
     return logger
 
-logger = make_logger()
+logger = _make_logger()
+logging.basicConfig(level=logging.INFO)
 
 
 def log(level: str, message: str, **kwargs):

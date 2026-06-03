@@ -9,6 +9,9 @@ services:
       - "8001:8001"
     environment:
       - PYTHONUNBUFFERED=1
+      - LOGS_DIR=/app/logs
+    volumes:
+      - ./logs:/app/logs
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s
@@ -24,6 +27,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - ACCOUNT_SERVICE_URL=http://account-service:8001
+      - LOGS_DIR=/app/logs
+    volumes:
+      - ./logs:/app/logs
     depends_on:
       account-service:
         condition: service_healthy
